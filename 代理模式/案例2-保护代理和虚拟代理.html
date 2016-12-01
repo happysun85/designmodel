@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+/**
+ * 保护代理和虚拟代理
+ * new的成本也很高，还是当需要用的时候在new 所以此处xiaoming只是发送了请求
+ * 当B真正该执行的时候才new
+ * @constructor
+ */
+var Flower = function() {
+
+};
+var xiaoming = {
+  sendFlower: function(target) {
+    target.receiveFlower();
+  }
+};
+var B = {
+  receiveFlower: function() {
+    A.listenGoodMoon(function() {
+      var flower = new Flower();
+      A.receiveFlower(flower);
+    })
+  }
+};
+var A = {
+  receiveFlower: function(flower) {
+    console.log('收到' + flower);
+  },
+  listenGoodMoon: function(fn) {
+    setTimeout(function() {
+      fn();
+    }, 1000)
+  }
+};
+xiaoming.sendFlower(B);
+</script>
+</body>
+</html>
