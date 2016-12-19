@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+/**
+ * 它定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖
+ * 它的对象都将得到通知。
+ * 在javascript中，我们一般用事件模型来替代传统的发布-订阅模式
+ *
+ */
+//注意，手动触发事件更好的做法是 IE下用 fireEvent ，标准浏览器下用 dispatchEvent 实现。
+
+//-----------------------------------------------------------------[自定义事件]
+//基础版
+/*var salesOffices = {};
+ salesOffices.clientList = [];
+ salesOffices.listen = function(fn) {
+ this.clientList.push(fn);   //新增订阅者
+ };
+ salesOffices.trigger = function() {   //发布消息
+ for (var i = 0, fn; fn = this.clientList[i++];) {
+ fn.apply(this, arguments);        //
+ }
+ };
+ //测试
+ salesOffices.listen(function(price, quareMeter) {//小宏订阅A
+ console.log('aaaa=' + price);
+ console.log('squareMeter=' + quareMeter);
+ });
+
+ salesOffices.listen(function(price, quareMeter) {//小明订阅
+ console.log('bbbbb=' + price);
+ console.log('squareMeter=' + quareMeter);
+ });
+ salesOffices.trigger(2000, 88);
+ salesOffices.trigger(3000, 110);*/
+
+
+//高级一点  例：小明只想买88平米，但是发布者告诉他110的
+/*var salesOffices = {};
+ salesOffices.clientList = {};
+ salesOffices.listen = function(key, fn) {
+ if (!this.clientList[key]) {
+ this.clientList[key] = [];
+ }
+ this.clientList[key].push(fn);
+ console.log(this.clientList[key]);
+ };
+ salesOffices.trigger = function() {
+ var key = Array.prototype.shift.call(arguments),
+ fns = this.clientList[key];
+ if (!fns || fns.length === 0) {//如果没有订阅该消息，则返回
+ return false;
+ }
+ for (var i = 0, fn; fn = fns[i++];) {
+ fn.apply(this, arguments);
+ }
+ };
+
+ salesOffices.listen('squareMeter88', function(price) {
+ console.log('价格=' + price);
+ });
+ salesOffices.listen('squareMeter110', function(price) {
+ console.log('价格=' + price);
+ });
+ salesOffices.trigger('squareMeter88', 20000);
+ salesOffices.trigger('squareMeter110', 20000);*/
+
+
+//发布-订阅模式的通用实现
+/**
+ * 复制属性到新对象里么。这样就创建了N个订阅模式
+ * @type {{
+ * clientList: Array,
+ * listen: event.listen,
+ * trigger: event.trigger,
+ * remove: event.remove
+ * }}
+ */
+var event = {
+  clientList: [],     //此处用数组仅仅是为了验证用？
+  listen: function(key, fn) {
+    if (!this.clientList[key]) {
+      this.clientList[key] = [];
+    }
+    this.clientList[key].push(fn);  //订阅的消息添加进缓存列表
+  },
+  trigger: function() {
+    var key = Array.prototype.shift.call(arguments),
+        fns = this.clientList[key];
+
+    if (!fns || fns.length === 0) {       //如果没有绑定对应的消息
+      return false;
+    }
+    for (var i = 0, fn; fn = fns[i++];) {
+      fn.apply(this, arguments);          //arguments是trigger时带上的参数
+    }
+  },
+  remove: function(key, fn) {
+    var fns = this.clientList[key];
+    if (!fns) {
+      return false;
+    }
+    if (!fn) {
+      fns && (fns.length = 0);
+    } else {
+      for (var l = fns.length - 1; l >= 0; l--) {
+        var _fn = fns[l];
+        if (_fn === fn) {
+          fns.split(l, 1);          //删除订阅者的毁掉函数
+        }
+      }
+    }
+  }
+};
+var installEvent = function(obj) {
+  for (var i in event) {
+    obj[i] = event[i];
+  }
+};
+var salesOffices = {};
+installEvent(salesOffices);
+salesOffices.listen('squareMeter88', fn1 = function(price) {
+  console.log('价格=' + price);
+});
+salesOffices.listen('squareMeter110', fn2 = function(price) {
+  console.log('价格=' + price);
+});
+//salesOffices.trigger('squareMeter88', 20000);
+salesOffices.remove('quareMeter88', fn1);
+salesOffices.trigger('squareMeter110', 20000);
+</script>
+</body>
+</html>

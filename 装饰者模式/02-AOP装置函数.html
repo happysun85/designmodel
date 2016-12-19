@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+'use strict';
+Function.prototype.after = function(afterfn) {
+  var __self = this;
+  return function() {
+    var ret = __self.apply(this, arguments);
+    afterfn.apply(this, arguments);
+    return ret;
+  }
+};
+Function.prototype.before = function(beforefn) {
+  var __self = this; // 保存原函数的引用
+  return function() { // 返回包含了原函数和新函数的"代理"函数
+    //当第一次执行before的时候传进来的函数被保存在这个return里。
+    beforefn.apply(this, arguments); // 执行新函数，且保证 this 不被劫持，新函数接受的参数
+    // 也会被原封不动地传入原函数，新函数在原函数之前执行
+    return __self.apply(this, arguments); // 执行原函数并返回原函数的执行结果，
+    // 并且保证 this 不被劫持
+  }
+}
+/*
+
+ var a = function() {
+ alert(1);
+ };
+ var b = function() {
+ alert('b')
+ };
+ a.before(function() {
+ alert(2);
+ })
+ .before(b)();*/
+
+/*值得提到的是，上面的 AOP实现是在 Function.prototype 上添加 before 和 after 方法，但许
+ 多人不喜欢这种污染原型的方式，那么我们可以做一些变通，把原函数和新函数都作为参数传入
+ before 或者 after 方法：*/
+/*var before = function(fn, beforefn) {
+ return function() {
+ beforefn.apply(this, arguments);
+ return fn.apply(this, arguments);
+ }
+ }
+ var a = before(
+ function() {
+ alert(3)
+ },
+ function() {
+ alert(2)
+ }
+ );
+ a = before(a, function() {
+ alert(1);
+ });
+ a();*/
+
+
+//下面的例子展示了如何通过 Function.prototype.before 方法给函数 func 的参数 param 动态地
+//添加属性 b ：
+/*var func = function(param) {
+ console.log(param); // 输出： {a: "a", b: "b"}
+ }
+ func = func.before(function(param) {
+ param.b = 'b';
+ });
+ func({a: 'a'});*/
+
+//AOP模式添加属性
+//模拟全局应用的ajax请求，但是我们我们的网站遭受了CSRF攻击。
+//解决 CSRF攻击最简单的一个办法就是在 HTTP请求中带上一个 Token 参数。
+
+//模拟ajax异步请求
+var ajax = function(type, url, param) {
+  console.log(param); // 发送 ajax 请求的代码略
+};
+//然后把 Token 参数通过 Function.prototyte.before 装饰到 ajax 函数的参数 param 对象中：
+
+var getToken = function() {
+  return 'Token';
+};
+
+ajax = ajax.before(function(type, url, param) {
+  param.Token = getToken();
+});
+
+ajax('get', 'http:// xxx.com/userinfo', {name: 'sven'});
+
+</script>
+</body>
+</html>

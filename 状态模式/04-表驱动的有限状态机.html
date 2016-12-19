@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+/**
+ * 这个思想牛逼
+ */
+var fsm = StateMachine.create({
+  initial: 'off',
+  events: [
+    {name: 'buttonWasPressed', from: 'off', to: 'on'},
+    {name: 'buttonWasPressed', from: 'on', to: 'off'}
+  ],
+  callbacks: {
+    onbuttonWasPressed: function(event, from, to) {
+      console.log(arguments);
+    }
+  },
+  error: function(eventName, from, to, args, errorCode, errorMessage) {
+    console.log(arguments); // 从一种状态试图切换到一种不可能到达的状态的时候
+  }
+});
+button.onclick = function() {
+  fsm.buttonWasPressed();
+}
+/**
+ * 关于这个库的更多内容这里不再赘述，有兴趣的同学可以前往：https:// github.com/jakesgordon/
+ * javascript-state-machine学习。
+ */
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+//符合开放-封闭原则
+
+//这里是加载真正图片的地方
+var myImage = (function() {
+  var imgNode = document.createElement('img');
+  document.body.appendChild(imgNode);
+  return {
+    setSrc: function(src) {
+      imgNode.src = src;
+    }
+  }
+})();
+
+
+//代理函数先给展示的img标签一个本地loading图片，然后把真正图片的地址给一个临时的img让他加载图片
+//当图片加载完成的时候代表本地已经有了缓存，再把图片地址替换到展示的img上。
+var proxyImage = (function() {
+  var img = new Image;
+  img.onload = function() {
+    //当图片加载完成时事件，调用真正图片的函数
+    myImage.setSrc(this.src);
+  };
+  return {
+    setSrc: function(src) {
+      myImage.setSrc('http://img.zcool.cn/community/01098e554b5932000001bf72ac2c84.jpg');
+      img.src = src;
+    }
+  }
+})();
+proxyImage.setSrc('http://img.bizhi.sogou.com/images/2012/02/04/128821.jpg');
+
+//myImage.setSrc('https://p.ssl.qhimg.com/dmsmty/74_74_100/t0198534085cf1ac6c2.png');
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<title>Document</title>
+</head>
+<body>
+
+<script>
+/**
+ * 把请求封装成命令对象的优点在这里再次体现了出来，对象的生命周期几乎是永久的，除非
+ 我们主动去回收它。也就是说，命令对象的生命周期跟初始请求发生的时间无关， command 对象
+ 的 execute 方法可以在程序运行的任何时刻执行，即使点击按钮的请求早已发生，但我们的命令
+ 对象仍然是有生命的。
+ 所以我们可以把 div的这些运动过程都封装成命令对象，再把它们压进一个队列堆栈，当动
+ 画执行完，也就是当前 command 对象的职责完成之后，会主动通知队列，此时取出正在队列中等
+ 待的第一个命令对象，并且执行它。
+ 我们比较关注的问题是，一个动画结束后该如何通知队列。通常可以使用回调函数来通知队
+ 列，除了回调函数之外，还可以选择发布订阅模式。
+ */
+</script>
+</body>
+</html>
