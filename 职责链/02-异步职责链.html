@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+/**
+ * 解决异步请求的职责链问题
+ * 在上一节的职责链模式中，我们让每个节点函数同步返回一个特定的值 "nextSuccessor" ，来表示
+ * 是否把请求传递给下一个节点。而在现实开发中，我们经常会遇到一些异步的问题，比如我们要在
+ * 节点函数中发起一个 ajax异步请求，异步请求返回的结果才能决定是否继续在职责链中 passRequest 。
+ * 这时候让节点函数同步返回 "nextSuccessor" 已经没有意义了，所以要给 Chain 类再增加一个
+ * 原型方法 Chain.prototype.next ，表示手动传递请求给职责链中的下一个节点：
+ */
+//region==================================================【异步职责连】
+var Chain = function(fn) {
+  this.fn = fn;
+  this.successor = null;
+};
+Chain.prototype.setNextSuccessor = function(successor) {
+  return this.successor = successor;
+};
+Chain.prototype.passRequest = function() {
+  var ret = this.fn.apply(this, arguments);
+  if (ret === 'nextSuccessor') {
+    return this.successor && this.successor.passRequest.apply(this.successor, arguments);
+  }
+  return ret;
+};
+Chain.prototype.next = function() {
+  return this.successor && this.successor.passRequest.apply(this.successor, arguments);
+};
+//来看一个异步职责链的例子：
+var fn1 = new Chain(function() {
+  console.log(1);
+  return 'nextSuccessor';
+});
+var fn2 = new Chain(function() {
+  console.log(2);
+  var self = this;
+  setTimeout(function() {
+    self.next();
+  }, 1000);
+});
+var fn3 = new Chain(function() {
+  console.log(3);
+});
+fn1.setNextSuccessor(fn2).setNextSuccessor(fn3);
+fn1.passRequest();
+/**
+ * 其实就是非异步用 setNext   异步就手动next方法
+ */
+/**
+ * 现在我们得到了一个特殊的链条，请求在链中的节点里传递，但节点有权利决定什么时候把
+ * 请求交给下一个节点。可以想象，异步的职责链加上命令模式（把 ajax请求封装成命令对象，详
+ * 情请参考第 9章），我们可以很方便地创建一个异步 ajax队列库。
+ *
+ * 原来异步队列，就是手动执行。。。。这下明白了原来看动画插件不懂得地方了
+ */
+
+
+/**
+ * 职责链模式的最大优点就是解耦了请求发送者和 N 个接收者之间的复杂关系，由于不知道链中
+ * 的哪个节点可以处理你发出的请求，所以你只需把请求传递给第一个节点即可
+ */
+//endregion
+</script>
+</body>
+</html>

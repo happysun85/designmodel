@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+<script>
+var Chain = function(fn) {
+  this.fn = fn;
+  this.successor = null;
+};
+Chain.prototype.setNextSuccessor = function(successor) {
+  return this.successor = successor;
+};
+Chain.prototype.passRequest = function() {
+  var ret = this.fn.apply(this, arguments);
+  if (ret === 'nextSuccessor') {
+    return this.successor && this.successor.passRequest.apply(this.successor, arguments);
+  }
+  return ret;
+};
+Chain.prototype.next = function() {
+  return this.successor && this.successor.passRequest.apply(this.successor, arguments);
+};
+
+var order500 = function(orderType, pay, stock) {
+  if (orderType === 1 && pay === true) {
+    console.log('500 元定金预购，得到 100 优惠券');
+  } else {
+    return 'nextSuccessor'; // 我不知道下一个节点是谁，反正把请求往后面传递
+  }
+};
+var order200 = function(orderType, pay, stock) {
+  if (orderType === 2 && pay === true) {
+    console.log('200 元定金预购，得到 50 优惠券');
+  } else {
+    return 'nextSuccessor'; // 我不知道下一个节点是谁，反正把请求往后面传递
+  }
+};
+var orderNormal = function(orderType, pay, stock) {
+  if (stock > 0) {
+    console.log('普通购买，无优惠券');
+  } else {
+    console.log('手机库存不足');
+  }
+};
+
+//
+/**
+ * 面向切面
+ * 是一个抽象出来的独立的功能模块，连接点（Join Point）是一个可以引入切面的接口，
+ * 通知（Advice）是 包括Before、After、Around和Throw四种类型的处理逻辑。
+ * 面向切面编程就是将底层大量而又分散的功能相似的模块集中起来，这些集中起来的
+ * 功能模块就成为切面，在需要使用这些模块的地方设置连接点，通过配置文件以声明的
+ * 方式把模块指定到所需的连接点，根据不同的通知在程序的不同位置注入代码。
+ */
+Function.prototype.after = function(fn) {
+  var self = this;
+  return function() {
+    var ret = self.apply(this, arguments);
+    if (ret === 'nextSuccessor') {
+      return fn.apply(this, arguments);
+    }
+    return ret;
+  }
+};
+var order = order500.after(order200).after(orderNormal);
+order(1, true, 500); // 输出：500 元定金预购，得到 100 优惠券
+order(2, true, 500); // 输出：200 元定金预购，得到 50 优惠券
+order(1, false, 500); // 输出：普通购买，无优惠券
+</script>
+</body>
+</html>

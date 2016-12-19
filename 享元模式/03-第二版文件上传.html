@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Title</title>
+</head>
+<body>
+
+<script>
+/**
+ * 上一节代码是有多少个需要上传的文件，就一共创建了多少个Upload 对象，
+ * 接下来我们用享元模式重构它。
+ */
+
+//首先确认插件类型uploadType是内部状态
+//在文件上传的例子里， upload 对象必须依赖 uploadType 属性才能工作，这是因为插件上传、
+//Flash 上传、表单上传的实际工作原理有很大的区别，它们各自调用的接口也是完全不一样的，
+//必须在对象创建之初就明确它是什么类型的插件，才可以在程序的运行过程中，让它们分别调用
+//各自的 start 、 pause 、 cancel 、 del 等方法。
+
+//实际上在微云的真实代码中，虽然插件和 Flash 上传对象最终创建自一个大的工厂类，但它
+//们实际上根据 uploadType 值的不同，分别是来自于两个不同类的对象。（在目前的例子中，为了
+//简化代码，我们把插件和 Flash的构造函数合并成了一个。）
+
+//一旦明确了 uploadType ，无论我们使用什么方式上传，这个上传对象都是可以被任何文件共
+//用的。而 fileName 和 fileSize 是根据场景而变化的，每个文件的 fileName 和 fileSize
+// 都不一样，
+//fileName 和 fileSize 没有办法被共享，它们只能被划分为外部状态。
+
+/**
+ * 根据以上理解，
+ * 享元模式就是矮子里拔将军，找到分类最少的并且可以被共享使用的那部分做内部状态。
+ */
+
+var Upload = function(uploadType) {
+  this.uploadType = uploadType;
+};
+Upload.prototype.delFile = function(id) {
+  //通过setExternalState保存的N个文件的属性以及DOM对象。然后动态的赋值到这一个固定Upload对象上执行
+  uploadManager.setExternalState(id, this);
+  //其实当前对象下并没有dom/fileName/fileSize这些东西，
+  //而是像前面例子一样由外部 直接赋值给对象创建出来的。如下面例子的name
+  /*
+   var test=function(){
+   //其实这里并没有name
+   this.say=function(){
+   alert(this.name);
+   }
+   }
+   var t1=new test();
+   t1.name='sunheng';
+   t1.say();
+   */
+  if (this.fileSize < 3000) {
+    return this.dom.parentNode.removeChild(this.dom);
+  }
+  if (window.confirm('确定要删除该文件吗？' + this.fileName)) {
+    return this.dom.parentNode.removeChild(this.dom);
+  }
+};
+
+//工厂进行对象实例化
+
+//如果某种内部状态对应的共享对象已经被创建过，那么直接返回这个对象，否则创建一个新对象
+UploadFactory = (function() {
+  var createdFlyWeightObjs = {};
+  return {
+    create: function(uploadType) {
+      //当前这个uploadType类型的对象是否存在，有则返回，无则创建保存到对象里返回
+      if (createdFlyWeightObjs[uploadType]) {
+        return createdFlyWeightObjs[uploadType];
+      }
+      return createdFlyWeightObjs[uploadType] = new Upload(uploadType)
+    }
+  }
+})();
+
+//管理器封装外部状态
+//负责向UploadFactory提交创建对象的请求，并用一个uploadDatabase对象保存所有upload
+//对象的外部状态，以便在程序运行过程中给Upload共享对象设置外部状态。
+
+var uploadManager = (function() {
+  var uploadDatabase = {};
+  return {
+    add: function(id, uploadType, fileName, fileSize) {
+      //创建一个基于upload基本属性的对象。返回的肯定是有这个Type的对象
+      var flyWeightObj = UploadFactory.create(uploadType);
+      var dom = document.createElement('div');
+      dom.innerHTML =
+          '<span>文件名称：' + fileName + ', 文件大小：' + fileSize + '</span>' +
+          '<button class="delFile">删除</button>';
+      dom.querySelector('.delFile').onclick = function() {
+        flyWeightObj.delFile(id);
+      };
+      document.body.appendChild(dom);
+
+      //把当前文件的信息以及DOM对象存在uploadDatabase里
+      uploadDatabase[id] = {
+        fileName: fileName,
+        fileSize: fileSize,
+        dom: dom
+      };
+      return flyWeightObj;      //return 无意义
+    },
+
+    /**
+     * id: 识别要取manager里的哪一个数据
+     * flyWeightObj ： 是享元最关键的元数据。为添加任何数据的
+     */
+    setExternalState: function(id, flyWeightObj) {
+      //取出特定文件的属性，如：fileName/fileSize/dom
+      var uploadData = uploadDatabase[id];
+      for (var i in uploadData) {     //遍历属性，赋值到基础对象（Upload）里
+        flyWeightObj[i] = uploadData[i];
+      }
+    }
+  }
+})();
+
+//触发
+var id = 0;
+window.startUpload = function(uploadType, files) {
+  for (var i = 0, file; file = files[i++];) {
+    //基本数据添加到uploadmanager里
+    var uploadObj = uploadManager.add(++id, uploadType, file.fileName, file.fileSize);
+  }
+};
+startUpload('plugin', [
+  {
+    fileName: '1.txt',
+    fileSize: 1000
+  },
+  {
+    fileName: '2.html',
+    fileSize: 3000
+  },
+  {
+    fileName: '3.txt',
+    fileSize: 5000
+  }
+]);
+startUpload('flash', [
+  {
+    fileName: '4.txt',
+    fileSize: 1000
+  },
+  {
+    fileName: '5.html',
+    fileSize: 3000
+  },
+  {
+    fileName: '6.txt',
+    fileSize: 5000
+  }
+]);
+
+/**
+ * 案例总结
+ * 通过startUpload向uploadManager里添加文件的数据并全部保存到一个对象里
+ * uploadManager功能：生成一个元对象、生成标签、并保存传进来的文件数据到对象里。
+ * 一切准备工作完成并展示
+ * 精华在删除时如何把manager里的数据拿出来用统一的方式处理
+ * 触发删除的关键在于执行setExternalState。 这里通过ID找到manager里的指定数据
+ * 然后，传入this(享元的那个“元”) 通过这个set这个方法往里添加属性 this.dom / this.fileName / this.fileSize
+ * 不知不觉这个空白的this（元）倍组合成为了一个独一无二的对象加以操作。
+ */
+
+/**
+ * 享元模式是一种很好的性能优化方案，但它也会带来一些复杂性的问题，从前面两组代码的
+ * 比较可以看到，使用了享元模式之后，我们需要分别多维护一个 factory 对象和一个 manager 对
+ * 象，在大部分不必要使用享元模式的环境下，这些开销是可以避免的。
+ * 享元模式带来的好处很大程度上取决于如何使用以及何时使用，一般来说，以下情况发生时
+ * 便可以使用享元模式。
+ *
+ *   一个程序中使用了大量的相似对象。
+ *   由于使用了大量对象，造成很大的内存开销。
+ *   对象的大多数状态都可以变为外部状态。
+ *   剥离出对象的外部状态之后，可以用相对较少的共享对象取代大量对象。
+ */
+</script>
+</body>
+</html>
